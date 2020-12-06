@@ -132,7 +132,6 @@ BOOL CTemperatureGetToolDlg::PreTranslateMessage(MSG* pMsg)
 			return TRUE;
 		}
 	}
-
 	return CDialogEx::PreTranslateMessage(pMsg);
 }
 
@@ -206,7 +205,6 @@ void CTemperatureGetToolDlg::OnFileOpen()
 		strFileName = dlg.GetPathName(); // 获取文件路径+名称
 		//TRACE(strFileName);
 	}
-
 	else return;
 
 	// 3. 打开文件
@@ -216,9 +214,7 @@ void CTemperatureGetToolDlg::OnFileOpen()
 		//TRACE(_T("读取文件失败！"));
 		return;
 	}
-
 	m_pThread = AfxBeginThread(&MyControllingFunction, this, THREAD_PRIORITY_NORMAL, 0, 0, NULL);
-
 }
 
 // 打开并读取文件
@@ -228,10 +224,7 @@ BOOL CTemperatureGetToolDlg::ReadFile(CString strPath)
 	CFile file;
 	BOOL bRet = file.Open(strPath, CFile::modeRead);
 
-	if (FALSE == bRet)
-	{
-		return bRet;
-	}
+	if (FALSE == bRet) return bRet;
 
 	// 区分文件类型Unicode、ASNI、UTF-8
 	char sType[4];
@@ -242,18 +235,14 @@ BOOL CTemperatureGetToolDlg::ReadFile(CString strPath)
 	case 0xEFBB:
 		ReadUTF8(file);
 		break;
-
 	case  0xFFFE:
 		ReadUnicode(file);
 		break;
-
 	default:
 		ReadANSIFile(file);
 		break;
 	}
-
 	file.Close();
-
 	return bRet;
 }
 
@@ -318,7 +307,7 @@ void CTemperatureGetToolDlg::OnInitListCtrl()
 	DWORD dwStyle = m_list.GetExtendedStyle();
 	dwStyle |= LVS_EX_FULLROWSELECT; // 选中某行使整行高亮（只适用与report风格的listctrl）
 	dwStyle |= LVS_EX_GRIDLINES; // 网格线（只适用与report风格的listctrl）
-	m_list.SetExtendedStyle(dwStyle); //设置扩展风格
+	m_list.SetExtendedStyle(dwStyle);
 
 	m_list.InsertColumn(0, _T("No."), LVCFMT_LEFT, 80);
 	m_list.InsertColumn(1, _T("Time"), LVCFMT_LEFT, 300);
@@ -345,9 +334,7 @@ void CTemperatureGetToolDlg::OnRclickList(NMHDR* pNMHDR, LRESULT* pResult)
 
 void CTemperatureGetToolDlg::OnCopyClick()
 {
-	TRY
-	{
-		// 获取单击所在的行号
+	TRY {
 		CString clip_buf;
 		CString strText;
 		POSITION pos = m_list.GetFirstSelectedItemPosition();
@@ -355,30 +342,24 @@ void CTemperatureGetToolDlg::OnCopyClick()
 		if (pos == NULL) {
 			TRACE(_T("No items were selected!\n"));
 		}
-
-		else
-		{
-			while (pos)
-			{
+		else {
+			while (pos) {
 				int nItem = m_list.GetNextSelectedItem(pos);
 				strText = m_list.GetItemText(nItem, 0);
 				int nCount = m_list.GetHeaderCtrl()->GetItemCount();
 
-				for (int i = 1; i < nCount; ++i)
-				{
+				for (int i = 1; i < nCount; ++i) {
 					strText = strText + CString("\t") + m_list.GetItemText(nItem, i);
 				}
-
 				clip_buf += strText + CString("\n");
 			}
 		}
-
-		// 复制剪切板
+		// 复制到剪切板
 		if (!clip_buf.IsEmpty()) {
 			if (OpenClipboard()) {
 				EmptyClipboard();
 				TCHAR* pszData;
-				HGLOBAL hClipboardData = GlobalAlloc(GMEM_DDESHARE, (clip_buf.GetLength() + 1) * sizeof(TCHAR));
+				HGLOBAL hClipboardData = GlobalAlloc(GMEM_DDESHARE, ((long)clip_buf.GetLength() + 1) * sizeof(TCHAR));
 
 				if (hClipboardData) {
 					pszData = (TCHAR*)GlobalLock(hClipboardData);
@@ -389,13 +370,11 @@ void CTemperatureGetToolDlg::OnCopyClick()
 					GlobalUnlock(hClipboardData);
 					SetClipboardData(CF_UNICODETEXT, hClipboardData);//根据相应的数据选择第一个参数，（CF_TEXT）
 				}
-
 				CloseClipboard();
 			}
 		}
 	}
-		CATCH_ALL(e)
-	{
+	CATCH_ALL(e) {
 		e->ReportError();
 		return;
 	}
@@ -405,19 +384,14 @@ void CTemperatureGetToolDlg::OnCopyClick()
 void CTemperatureGetToolDlg::OnKeydownList(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	LPNMLVKEYDOWN pLVKeyDow = reinterpret_cast<LPNMLVKEYDOWN>(pNMHDR);
-
-	// TODO: 在此添加控件通知处理程序代码
-	if ((::GetKeyState(VK_CONTROL) & 0x8000) && (pLVKeyDow->wVKey == 'C' || pLVKeyDow->wVKey == 'c'))
-	{
+	if ((::GetKeyState(VK_CONTROL) & 0x8000) && (pLVKeyDow->wVKey == 'C' || pLVKeyDow->wVKey == 'c')) {
 		OnCopyClick();
 	}
-
 	*pResult = 0;
 }
 
 void CTemperatureGetToolDlg::OnMenuSave()
 {
-	// 文件类型过滤器
 	static TCHAR szFilter[] =
 		_T("XML Files (*.xls)|*.xls|")
 		_T("All Files (*.*)|*.*||");
@@ -437,7 +411,6 @@ void CTemperatureGetToolDlg::OnMenuSave()
 		ReportExcel(savePath);
 		m_filePath = savePath;
 	}
-
 }
 
 UINT __cdecl CTemperatureGetToolDlg::ExportExcelThread(LPVOID pParam)
@@ -447,21 +420,21 @@ UINT __cdecl CTemperatureGetToolDlg::ExportExcelThread(LPVOID pParam)
 	int nItem = pThis->m_list.GetItemCount();
 	CStdioFile file(pThis->m_filePath, CFile::shareExclusive | CFile::modeWrite | CFile::modeCreate);
 
-	setlocale(LC_CTYPE, ("chs")); //设置中文输出
+	setlocale(LC_CTYPE, ("chs")); // 设置中文输出
 
-	file.WriteString(_T("序号\t时间\t原始数据\t温度/℃\t湿度/RH%\n"));
+	file.WriteString(_T("序号\t时间\t原始数据\t温度/℃\t湿度/RH%\n")); // 设置表头标题内容
 
 	CString strText, strBuf;
 	int row = 0;
 	pThis->m_progress.SetRange32(0, nItem);
 	pThis->m_progress.SetPos(0);
-	while (row < nItem)
-	{
+
+	// 逐行导出
+	while (row < nItem) {
 		strText = pThis->m_list.GetItemText(row, 0);
 		int nCount = pThis->m_list.GetHeaderCtrl()->GetItemCount();
 
-		for (int i = 1; i < nCount; ++i)
-		{
+		for (int i = 1; i < nCount; ++i) {
 			strText = strText + CString("\t") + pThis->m_list.GetItemText(row, i);
 		}
 
@@ -471,7 +444,6 @@ UINT __cdecl CTemperatureGetToolDlg::ExportExcelThread(LPVOID pParam)
 		pThis->m_progress.SetPos(row + 1);
 		++row;
 	}
-
 	file.Close();
 	pThis->MessageBox(_T("导出成功"), _T("导出提示"), MB_ICONINFORMATION);
 
@@ -488,7 +460,6 @@ void CTemperatureGetToolDlg::ReportExcel(LPCTSTR strPath)
 
 void CTemperatureGetToolDlg::OnMenuSaveAs()
 {
-	// 文件类型过滤器
 	static TCHAR szFilter[] =
 		_T("XML Files (*.xls)|*.xls|")
 		_T("All Files (*.*)|*.*||");
@@ -499,18 +470,16 @@ void CTemperatureGetToolDlg::OnMenuSaveAs()
 	int nRet = dlg.DoModal();
 	CString savePath;
 
-	if (nRet == IDOK)
-	{
+	if (nRet == IDOK) {
 		savePath = dlg.GetPathName();
-
-		if (savePath.Find(_T(".xls")) < 0)
-		{
+		// 判断是否有文件后缀，没有则追加xls后缀
+		if (savePath.Find(_T(".xls")) < 0) {
 			savePath += _T(".xls");
 		}
-		if (m_filePath.IsEmpty()) {
+		if (m_filePath.IsEmpty()) { // 先前未存，调用导出函数保存文件
 			ReportExcel(savePath);
 		}
-		else {
+		else { // 另存为，直接使用copy命令拷贝一份
 			CString strTmp;
 			strTmp.Format(_T("copy %s %s"), m_filePath.GetString(), savePath.GetString());
 			char* pStr = CStringtochar(strTmp);
@@ -529,22 +498,35 @@ void CTemperatureGetToolDlg::OnAboutShow()
 int CTemperatureGetToolDlg::strHexToDec(char* hexl, char* hexh, int type)
 {
 	int res = 0;
-	int lh, ll, hl, hh;
+	int temp_arry[4];
 
 	if (hexl == NULL || hexh == NULL) return -1;
 
-	lh = hexl[2] - '0';
-	ll = hexl[3] - '0';
-	hh = hexh[2] - '0';
-	hl = hexh[3] - '0';
+	temp_arry[3] = hexl[3]; // hexh="0x69" hexl="0xef" -> 0x69ef
+	temp_arry[2] = hexl[2];
+	temp_arry[1] = hexh[3];
+	temp_arry[0] = hexh[2];
 
-	res = (hh * 16 * 16 * 16 + hl * 16 * 16 + lh * 16 + ll);
+	size_t len = sizeof(temp_arry) / sizeof(int);
+	for (size_t i = 0; i < len; i++) {
+		if ((temp_arry[i] >= 'a') && (temp_arry[i] <= 'f')) {
+			temp_arry[i] = temp_arry[i] - 'a' + 10;
+		}
+		else if ((temp_arry[i] >= 'A') && (temp_arry[i] <= 'F')) {
+			temp_arry[i] = temp_arry[i] - 'A' + 10;
+		}
+		else {
+			temp_arry[i] = temp_arry[i] - '0';
+		}
+		res = (res << 4) + temp_arry[i];
+	}
 
 	if (res != 0 && !type) res -= 20000;
 
 	return res;
 }
 
+// 分离报文中的温度数据和湿度数据
 void CTemperatureGetToolDlg::calc(char* pbuf, double* out_temp, double* out_humid)
 {
 	const char* d = " ";
@@ -553,8 +535,7 @@ void CTemperatureGetToolDlg::calc(char* pbuf, double* out_temp, double* out_humi
 	int i = 0;
 	p = strtok(pbuf, d);
 
-	while (p)
-	{
+	while (p) {
 		strcpy_s(buf[i], 5, p);
 		p = strtok(NULL, d);
 		++i;
@@ -572,40 +553,44 @@ void CTemperatureGetToolDlg::calc(char* pbuf, double* out_temp, double* out_humi
 UINT __cdecl CTemperatureGetToolDlg::MyControllingFunction(LPVOID pParam)
 {
 	CTemperatureGetToolDlg* pThis = (CTemperatureGetToolDlg*)pParam;
+	pThis->m_pbuf = pThis->CStringtochar(pThis->m_fileInfo); // 获取窗口this指针
+
 	char buf[512] = { 0 };
-	pThis->m_pbuf = pThis->CStringtochar(pThis->m_fileInfo);
 	char* p_addr = pThis->m_pbuf;
 	int i = pThis->m_list.GetItemCount();
 	double temp = 0.0;
 	double humid = 0.0;
-	CString no;
-	CString strTmp, strHumid;
+	TCHAR no[64] = {0};
+	TCHAR strTmp[64] = {0}, strHumid[64] = {0};
 	int offset = 0;
 
 	while (1) {
-		offset = pThis->m_xmlObj.GetXMLBuffer_Str(p_addr, "Abs", buf);
-		if (offset == -1)
-			break;
+		offset = pThis->m_xmlObj.GetXMLBuffer_Str(p_addr, "Abs", buf); // 提取时间字段内容
+		if (offset == -1) break;
 
 		pThis->m_time = buf;
-		offset = pThis->m_xmlObj.GetXMLBuffer_Str(p_addr, "Data", buf);
+		offset = pThis->m_xmlObj.GetXMLBuffer_Str(p_addr, "Data", buf); // 提取数据字段内容
 		pThis->m_data = buf;
 
 		calc(buf, &temp, &humid);
-		strTmp.Format(_T("%5.2lf"), temp);
-		strHumid.Format(_T("%4.2lf"), humid);
+		_stprintf_s(strTmp, sizeof(strTmp) / 2, _T("%5.2lf"), temp);
+		_stprintf_s(strHumid, sizeof(strHumid) / 2, _T("%4.2lf"), humid);
 
-		no.Format(_T("%d"), i + 1);
-		pThis->m_list.InsertItem(i, no);
+		_stprintf_s(no, sizeof(no) / 2, _T("%d"), i + 1);
+		pThis->m_list.InsertItem(i, (LPCTSTR)no);
 		pThis->m_list.SetItemText(i, 1, pThis->m_time);
 		pThis->m_list.SetItemText(i, 2, pThis->m_data);
-		pThis->m_list.SetItemText(i, 3, strTmp);
-		pThis->m_list.SetItemText(i, 4, strHumid);
+		pThis->m_list.SetItemText(i, 3, (LPCTSTR)strTmp);
+		pThis->m_list.SetItemText(i, 4, (LPCTSTR)strHumid);
 
 		p_addr = (char*)offset;
 		pThis->m_list.SendMessage(WM_VSCROLL, SB_BOTTOM, NULL);
 		++i;
 	}
+
+	pThis->m_fileInfo.Empty();
+	pThis->m_time.Empty();
+	pThis->m_data.Empty();
 	delete []pThis->m_pbuf;
 	pThis->m_pbuf = NULL;
 
@@ -625,7 +610,7 @@ void CTemperatureGetToolDlg::OpenFileByPath(LPCTSTR strPath)
 	ShExecInfo.nShow = SW_MAXIMIZE;
 	ShExecInfo.hInstApp = NULL;
 
-	ShellExecuteEx(&ShExecInfo);
+	ShellExecuteEx(&ShExecInfo); // 通过外部程序打开导出的文件
 }
 
 void CTemperatureGetToolDlg::OnInitProgress()
@@ -634,11 +619,12 @@ void CTemperatureGetToolDlg::OnInitProgress()
 	m_progress.SetBarColor(RGB(0, 255, 0));
 }
 
-
 void CTemperatureGetToolDlg::OnDestroy()
 {
 	CDialogEx::OnDestroy();
-	m_fileInfo.Delete(0, m_fileInfo.GetLength()); // 释放申请的空间
-	if (m_pbuf != NULL)
-		delete[]m_pbuf;
+	m_fileInfo.Empty();
+	m_data.Empty();
+	m_time.Empty();
+	m_filePath.Empty();
+	if (m_pbuf != NULL) delete []m_pbuf;
 }

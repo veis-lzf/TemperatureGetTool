@@ -10,7 +10,6 @@ class CTemperatureGetToolDlg : public CDialogEx
 {
 // 构造
 public:
-
 	CTemperatureGetToolDlg(CWnd* pParent = nullptr);	// 标准构造函数
 	~CTemperatureGetToolDlg();
 // 对话框数据
@@ -24,7 +23,6 @@ protected:
 // 实现
 protected:
 	HICON m_hIcon;
-	HICON m_hIcon_normal;
 	HACCEL m_Accelerator;
 	CListCtrl m_list;
 	CString m_fileInfo;
