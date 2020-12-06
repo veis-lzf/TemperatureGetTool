@@ -10,6 +10,15 @@ class CTemperatureGetToolDlg : public CDialogEx
 {
 // 构造
 public:
+	enum btn_id
+	{
+		ID_BUTTON_1 = 567,
+		ID_BUTTON_2,
+		ID_BUTTON_3,
+		ID_BUTTON_4,
+		ID_BUTTON_5,
+		ID_BUTTON_6,
+	};
 	CTemperatureGetToolDlg(CWnd* pParent = nullptr);	// 标准构造函数
 	~CTemperatureGetToolDlg();
 // 对话框数据
@@ -20,7 +29,7 @@ public:
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支持
 
-// 实现
+	// 实现
 protected:
 	HICON m_hIcon;
 	HACCEL m_Accelerator;
@@ -32,6 +41,11 @@ protected:
 	CWinThread* m_pThread;
 	CString m_filePath;
 	CProgressCtrl m_progress;
+	CToolBar m_ToolBar;
+	CImageList m_ImageList;
+	CString m_strTips;
+	CBrush m_brush;
+	CRgn m_rgn;
 	char* m_pbuf;
 
 	// 生成的消息映射函数
@@ -47,6 +61,8 @@ protected:
 	afx_msg HCURSOR OnQueryDragIcon();
 	afx_msg void OnMenuSaveAs();
 	afx_msg void OnDestroy(void);
+	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
+	afx_msg LRESULT OnNcHitTest(CPoint point);
 
 	inline void CTemperatureGetToolDlg::OnMenuExit() { OnClose(); }
 	inline void CTemperatureGetToolDlg::OnOK() { }
@@ -67,10 +83,20 @@ private:
 	void OnInitListCtrl(void);
 	void OpenFileByPath(LPCTSTR strPath);
 	void OnInitProgress(void);
+	void OnInitToolBar(void);
+	void OnToolBarPic(void);
+	void OnToolBarCalc(void);
+	void OnToolBarClear(void);
+	void OnToolBarOpen(void);
+	void OnToolBarSave(void);
+	void OnToolBarExit(void);
+	BOOL OnToolBarTips(UINT id, NMHDR* pNMHDR, LRESULT* pResult);
+	BOOL LoadImageFromResource(CImage* pImage, UINT nResID, LPCTSTR lpTyp = _T("PNG"));
 
 protected:
 	static int strHexToDec(char* hexl, char* hexh, int type);
 	static void calc(char* pbuf, double* out_temp, double* out_humid);
 	static UINT __cdecl MyControllingFunction(LPVOID pParam);
 	static UINT __cdecl ExportExcelThread(LPVOID pParam);
+	void OnInitBackground();
 };

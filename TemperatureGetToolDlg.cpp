@@ -8,12 +8,14 @@
 #include "TemperatureGetToolDlg.h"
 #include "afxdialogex.h"
 #include "CXmlGet.h"
+#include "CChartCtrlUsr.h"
 #include <locale.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
+#define BTN_NUM_MAX 6
 
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
 
@@ -82,11 +84,62 @@ BEGIN_MESSAGE_MAP(CTemperatureGetToolDlg, CDialogEx)
 	ON_COMMAND(ID_32774, &CTemperatureGetToolDlg::OnMenuOpen)
 	ON_COMMAND(ID_32777, &CTemperatureGetToolDlg::OnAboutShow)
 	ON_COMMAND(ID_32782, &CTemperatureGetToolDlg::OnMenuSaveAs)
+	ON_COMMAND(ID_BUTTON_1, &CTemperatureGetToolDlg::OnToolBarPic)
+	ON_COMMAND(ID_BUTTON_2, &CTemperatureGetToolDlg::OnToolBarCalc)
+	ON_COMMAND(ID_BUTTON_3, &CTemperatureGetToolDlg::OnToolBarClear)
+	ON_COMMAND(ID_BUTTON_4, &CTemperatureGetToolDlg::OnToolBarOpen)
+	ON_COMMAND(ID_BUTTON_5, &CTemperatureGetToolDlg::OnToolBarSave)
+	ON_COMMAND(ID_BUTTON_6, &CTemperatureGetToolDlg::OnToolBarExit)
+	ON_NOTIFY_EX(TTN_NEEDTEXT, 0, OnToolBarTips)
 	ON_WM_DESTROY()
+	ON_WM_CTLCOLOR()
+	ON_WM_NCHITTEST()
 END_MESSAGE_MAP()
 
 
 // CTemperatureGetToolDlg 消息处理程序
+
+// 从资源加载图标函数
+BOOL CTemperatureGetToolDlg::LoadImageFromResource(CImage* pImage, UINT nResID, LPCTSTR lpTyp)
+{
+	if (pImage == NULL)
+		return false;
+
+	pImage->Destroy();
+	// 查找资源
+	HRSRC hRsrc = ::FindResource(AfxGetResourceHandle(), MAKEINTRESOURCE(nResID), lpTyp);
+	if (hRsrc == NULL)
+		return false;
+	// 加载资源
+	HGLOBAL hImgData = ::LoadResource(AfxGetResourceHandle(), hRsrc);
+	if (hImgData == NULL) {
+		::FreeResource(hImgData);
+		return false;
+	}
+
+	// 锁定内存中的指定资源
+	LPVOID lpVoid = ::LockResource(hImgData);
+	LPSTREAM pStream = NULL;
+	DWORD dwSize = ::SizeofResource(AfxGetResourceHandle(), hRsrc);
+	HGLOBAL hNew = ::GlobalAlloc(GHND, dwSize);
+	LPBYTE lpByte = (LPBYTE)::GlobalLock(hNew);
+	::memcpy(lpByte, lpVoid, dwSize);
+	// 解除内存中的指定资源
+	::GlobalUnlock(hNew);
+	// 从指定内存创建流对象
+	HRESULT ht = ::CreateStreamOnHGlobal(hNew, TRUE, &pStream);
+	if (ht != S_OK) {
+		GlobalFree(hNew);
+	}
+	else {
+		// 加载图片
+		pImage->Load(pStream);
+		GlobalFree(hNew);
+	}
+	// 释放资源
+	::FreeResource(hImgData);
+	return true;
+}
 
 BOOL CTemperatureGetToolDlg::OnInitDialog()
 {
@@ -112,6 +165,23 @@ BOOL CTemperatureGetToolDlg::OnInitDialog()
 		}
 	}
 
+	// 创建倒角
+	RECT rc;
+	GetClientRect(&rc); //获取客户区 上下左右 位置
+	m_rgn.CreateRoundRectRgn(rc.left, rc.top, rc.right, rc.bottom, 9, 9); //矩形圆角
+	SetWindowRgn(m_rgn, TRUE); //椭圆
+
+	// 设置为只保留客户区风格
+	DWORD dwStyle = GetStyle();//获取旧样式  
+	DWORD dwNewStyle = WS_OVERLAPPED | WS_VISIBLE | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
+	dwNewStyle &= dwStyle;//按位与将旧样式去掉  
+	SetWindowLong(m_hWnd, GWL_STYLE, dwNewStyle);//设置成新的样式  
+	DWORD dwExStyle = GetExStyle();//获取旧扩展样式  
+	DWORD dwNewExStyle = WS_EX_LEFT | WS_EX_LTRREADING | WS_EX_RIGHTSCROLLBAR;
+	dwNewExStyle &= dwExStyle;//按位与将旧扩展样式去掉  
+	SetWindowLong(m_hWnd, GWL_EXSTYLE, dwNewExStyle);//设置新的扩展样式  
+	SetWindowPos(NULL, 0, 0, 0, 0, SWP_NOZORDER | SWP_NOMOVE | SWP_NOSIZE | SWP_FRAMECHANGED);
+
 	// 设置此对话框的图标。  当应用程序主窗口不是对话框时，框架将自动
 	//  执行此操作
 	SetIcon(m_hIcon, TRUE);		// 设置大图标
@@ -120,6 +190,8 @@ BOOL CTemperatureGetToolDlg::OnInitDialog()
 	// TODO: 在此添加额外的初始化代码
 	OnInitListCtrl();
 	OnInitProgress();
+	OnInitToolBar();
+	OnInitBackground();
 	m_Accelerator = ::LoadAccelerators(AfxGetInstanceHandle(), MAKEINTRESOURCE(IDR_ACCELERATOR1));
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
@@ -199,7 +271,7 @@ void CTemperatureGetToolDlg::OnFileOpen()
 
 	// 2. 打开文件对话框
 	CString strFileName;
-	int nRet = dlg.DoModal();
+	int nRet = (int)dlg.DoModal();
 
 	if (nRet == IDOK) {
 		strFileName = dlg.GetPathName(); // 获取文件路径+名称
@@ -399,7 +471,7 @@ void CTemperatureGetToolDlg::OnMenuSave()
 	CFileDialog dlg(FALSE, NULL, NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT,
 		szFilter, NULL, 0, NULL);
 
-	int nRet = dlg.DoModal();
+	int nRet = (int)dlg.DoModal();
 	CString savePath;
 
 	if (nRet == IDOK) {
@@ -421,7 +493,6 @@ UINT __cdecl CTemperatureGetToolDlg::ExportExcelThread(LPVOID pParam)
 	CStdioFile file(pThis->m_filePath, CFile::shareExclusive | CFile::modeWrite | CFile::modeCreate);
 
 	setlocale(LC_CTYPE, ("chs")); // 设置中文输出
-
 	file.WriteString(_T("序号\t时间\t原始数据\t温度/℃\t湿度/RH%\n")); // 设置表头标题内容
 
 	CString strText, strBuf;
@@ -467,7 +538,7 @@ void CTemperatureGetToolDlg::OnMenuSaveAs()
 	CFileDialog dlg(FALSE, NULL, NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT,
 		szFilter, NULL, 0, NULL);
 
-	int nRet = dlg.DoModal();
+	int nRet = (int)dlg.DoModal();
 	CString savePath;
 
 	if (nRet == IDOK) {
@@ -563,7 +634,6 @@ UINT __cdecl CTemperatureGetToolDlg::MyControllingFunction(LPVOID pParam)
 	TCHAR no[64] = {0};
 	TCHAR strTmp[64] = {0}, strHumid[64] = {0};
 	int offset = 0;
-
 	while (1) {
 		offset = pThis->m_xmlObj.GetXMLBuffer_Str(p_addr, "Abs", buf); // 提取时间字段内容
 		if (offset == -1) break;
@@ -619,6 +689,43 @@ void CTemperatureGetToolDlg::OnInitProgress()
 	m_progress.SetBarColor(RGB(0, 255, 0));
 }
 
+void CTemperatureGetToolDlg::OnInitToolBar(void)
+{
+	// 1.注册工具栏
+	m_ToolBar.CreateEx(this, TBSTYLE_FLAT, WS_CHILD | WS_VISIBLE | CBRS_TOP |
+		CBRS_TOOLTIPS | CBRS_SIZE_DYNAMIC);
+	
+	// 2.创建图像列表
+	m_ImageList.Create(64, 64, ILC_COLOR32 | ILC_MASK, 0, 0);
+	CBitmap bmp;
+	for (int i = 0; i < BTN_NUM_MAX; ++i) {
+		bmp.LoadBitmap(IDB_BITMAP1 + i);
+		m_ImageList.Add(&bmp, RGB(255, 255, 255));
+		bmp.DeleteObject();
+	}
+
+	// 3.分配按钮ID
+	UINT nArray[BTN_NUM_MAX];
+	for (int i = 0; i < BTN_NUM_MAX; ++i) {
+		nArray[i] = ID_BUTTON_1 + i;
+	}
+	m_ToolBar.SetButtons(nArray, BTN_NUM_MAX);
+	m_ToolBar.SetSizes(CSize(72, 72), CSize(64, 64));
+
+	// 4.设置图像列表
+	m_ToolBar.EnableToolTips();
+	m_ToolBar.GetToolBarCtrl().SetImageList(&m_ImageList);
+
+	// 移动窗口
+	CRect rect_wnd;
+	GetClientRect(rect_wnd);
+	CRect rect(0, 10, 435, 80 + 5);
+	rect.OffsetRect(rect_wnd.right / 2 - rect.right / 2, 0);
+	m_ToolBar.MoveWindow(rect); 
+
+	// RepositionBars(AFX_IDW_CONTROLBAR_FIRST, AFX_IDW_CONTROLBAR_LAST, 0);
+}
+
 void CTemperatureGetToolDlg::OnDestroy()
 {
 	CDialogEx::OnDestroy();
@@ -627,4 +734,127 @@ void CTemperatureGetToolDlg::OnDestroy()
 	m_time.Empty();
 	m_filePath.Empty();
 	if (m_pbuf != NULL) delete []m_pbuf;
+}
+
+void CTemperatureGetToolDlg::OnToolBarPic()
+{
+	CChartCtrlUsr charCtrl;
+	CArray<double> xArry, yArry;
+	long nItem = 0;
+	TCHAR buf[128] = {0};
+	double x, y;
+
+	nItem = m_list.GetItemCount();
+	if (nItem) {
+		for (long i = 0; i < nItem; ++i) {
+			m_list.GetItemText(i, 0, buf, sizeof(buf));
+			x = _ttof(buf);
+			m_list.GetItemText(i, 3, buf, sizeof(buf));
+			y = _ttof(buf);
+
+			xArry.Add(x);
+			yArry.Add(y);
+		}
+		charCtrl.AddDataToBuf(xArry.GetData(), yArry.GetData(), xArry.GetSize());
+	}
+	charCtrl.DoModal();
+
+	xArry.RemoveAll();
+	yArry.RemoveAll();
+}
+
+void CTemperatureGetToolDlg::OnToolBarCalc()
+{
+	PROCESS_INFORMATION pi;
+	STARTUPINFO si;
+
+	memset(&pi, 0, sizeof(PROCESS_INFORMATION));
+	memset(&si, 0, sizeof(STARTUPINFO));
+
+	si.cb = sizeof(STARTUPINFO);
+	si.wShowWindow = SW_SHOW;
+	si.dwFlags = STARTF_USESHOWWINDOW;
+
+	::CreateProcess(_T("C://windows//system32//calc.exe"), NULL, NULL, FALSE,
+		NULL, NULL, NULL, NULL, &si, &pi);
+
+	WaitForSingleObject(pi.hProcess, INFINITE);
+	CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
+}
+
+void CTemperatureGetToolDlg::OnToolBarClear()
+{
+	if (m_list.GetItemCount() != 0)
+		m_list.DeleteAllItems();
+}
+
+void CTemperatureGetToolDlg::OnToolBarOpen()
+{
+	OnFileOpen();
+}
+
+void CTemperatureGetToolDlg::OnToolBarSave()
+{
+	OnMenuSave();
+}
+
+void CTemperatureGetToolDlg::OnToolBarExit()
+{
+	OnClose();
+}
+
+BOOL CTemperatureGetToolDlg::OnToolBarTips(UINT id, NMHDR* pNMHDR, LRESULT* pResult)
+{
+	TOOLTIPTEXT* pTTT = (TOOLTIPTEXT*)pNMHDR;
+	UINT nID = pNMHDR->idFrom;
+	UINT nIndex = m_ToolBar.CommandToIndex(nID);
+	switch (nIndex)
+	{
+	case 0:
+		m_strTips.Format(_T("打开曲线图"));
+		break;    
+	case 1:
+		m_strTips.Format(_T("计算器"));
+		break;
+	case 2:
+		m_strTips.Format(_T("清除列表数据"));
+		break;
+	case 3:
+		m_strTips.Format(_T("加载xml文件"));
+	break;
+	case 4:
+		m_strTips.Format(_T("保存文件"));
+		break;
+	case 5:
+		m_strTips.Format(_T("退出应用"));
+		break;
+	default:
+		break;
+	}
+	pTTT->lpszText = m_strTips.GetBuffer(m_strTips.GetLength());
+	pTTT->hinst = AfxGetResourceHandle();
+	return TRUE;
+}
+
+
+void CTemperatureGetToolDlg::OnInitBackground()
+{
+	CImage img;
+	//img.Load(_T("./res/bg.png"));
+	LoadImageFromResource(&img, IDB_PNG1);
+
+	CBitmap bmp;
+	bmp.Attach(img.Detach());
+	m_brush.CreatePatternBrush(&bmp);
+}
+
+HBRUSH CTemperatureGetToolDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
+{
+	return m_brush;
+}
+
+LRESULT CTemperatureGetToolDlg::OnNcHitTest(CPoint point)
+{
+	return HTCAPTION;
 }
